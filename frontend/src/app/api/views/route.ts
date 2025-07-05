@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 
-export async function GET(request: Request) {
+export async function GET() {
   const viewsPath = path.resolve("../backend/views.json");
   const file = await fs.readFile(viewsPath, "utf-8");
   const data = JSON.parse(file);
