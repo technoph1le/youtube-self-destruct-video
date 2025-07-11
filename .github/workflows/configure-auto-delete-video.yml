@@ -1,0 +1,45 @@
+name: YouTube View Checker
+
+on:
+  schedule:
+    - cron: "0 12 * * 0" # every Sunday 12:00 UTC
+  workflow_dispatch:
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        run: npm install
+        working-directory: ./backend
+
+      - name: Run autoDeleteVideo.js script
+        run: node ./backend/autoDeleteVideo.js
+        working-directory: ./backend
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          YT_VIDEO_ID: ${{ secrets.YT_VIDEO_ID }}
+          YT_CHANNEL_ID: ${{ secrets.YT_CHANNEL_ID }}
+
+      - name: Configure Git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit and push analytics.json
+        run: |
+          git add ./backend/analytics.json
+          git commit -m "Update analytics.json [skip ci]" || echo "No changes to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
