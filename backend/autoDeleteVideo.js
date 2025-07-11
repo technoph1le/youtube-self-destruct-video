@@ -1,4 +1,5 @@
 import "dotenv/config";
+import fs from "fs/promises";
 import { google } from "googleapis";
 
 const CLIENT_ID = process.env.YT_CLIENT_ID;
@@ -19,28 +20,27 @@ oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
 const youtubeAnalytics = google.youtubeAnalytics("v2");
 const youtube = google.youtube("v3");
 
-function getDateNDaysAgo(n) {
-  const date = new Date();
-  date.setDate(date.getDate() - n);
-  return date.toISOString().slice(0, 10);
+function getFormattedDate(date) {
+  return date.toISOString().split("T")[0]; // YYYY-MM-DD
 }
 
 async function getWatchTimeHours() {
-  const startDate = "2020-12-27"; // channel start year (lifetime analytics)
-  const endDate = getDateNDaysAgo(2); // YouTube analytics has ~2 day delay
+  const startDate = "2020-12-28"; // channel start
+  const endDate = getFormattedDate(new Date()); // today
+
+  console.log(`📅 Checking from ${startDate} to ${endDate}`);
 
   const res = await youtubeAnalytics.reports.query({
     auth: oauth2Client,
     ids: `channel==${CHANNEL_ID}`,
     metrics: "estimatedMinutesWatched",
-    filters: `video==${VIDEO_ID}`,
     startDate,
     endDate,
   });
 
   const minutes = res.data.rows?.[0]?.[0] || 0;
   const hours = (minutes / 60).toFixed(2);
-  console.log(`📊 Lifetime watch time: ${hours} hours`);
+  console.log(`📊 Lifetime watch time: ${hours} hours.`);
 
   return hours;
 }
@@ -52,7 +52,10 @@ async function saveAnalyticsJson(watchHours, isDeleted) {
     isVideoDeleted: isDeleted,
     lastChecked: new Date().toISOString(),
   };
-  await fs.writeFile("analytics.json", JSON.stringify(data, null, 2));
+  await fs.writeFile(
+    "../frontend/public/analytics.json",
+    JSON.stringify(data, null, 2)
+  );
   console.log("✅ analytics.json updated");
 }
 
