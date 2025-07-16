@@ -1,5 +1,7 @@
 import "dotenv/config";
+import path from "path";
 import fs from "fs/promises";
+import { fileURLToPath } from "url";
 import { google } from "googleapis";
 
 const CLIENT_ID = process.env.YT_CLIENT_ID;
@@ -28,8 +30,6 @@ async function getWatchTimeHours() {
   const startDate = "2020-12-28"; // channel start
   const endDate = getFormattedDate(new Date()); // today
 
-  console.log(`📅 Checking from ${startDate} to ${endDate}`);
-
   const res = await youtubeAnalytics.reports.query({
     auth: oauth2Client,
     ids: `channel==${CHANNEL_ID}`,
@@ -39,11 +39,21 @@ async function getWatchTimeHours() {
   });
 
   const minutes = res.data.rows?.[0]?.[0] || 0;
-  const hours = (minutes / 60).toFixed(2);
+  const hours = Number((minutes / 60).toFixed(2));
+
   console.log(`📊 Lifetime watch time: ${hours} hours.`);
 
   return hours;
 }
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ANALYTICS_PATH = path.join(
+  __dirname,
+  "..",
+  "frontend",
+  "public",
+  "analytics.json"
+);
 
 async function saveAnalyticsJson(watchHours, isDeleted) {
   const data = {
@@ -52,10 +62,7 @@ async function saveAnalyticsJson(watchHours, isDeleted) {
     isVideoDeleted: isDeleted,
     lastChecked: new Date().toISOString(),
   };
-  await fs.writeFile(
-    "../frontend/public/analytics.json",
-    JSON.stringify(data, null, 2)
-  );
+  await fs.writeFile(ANALYTICS_PATH, JSON.stringify(data, null, 2));
   console.log("✅ analytics.json updated");
 }
 
@@ -63,11 +70,21 @@ async function deleteIfWatchTimeMet() {
   const hours = await getWatchTimeHours();
   if (hours >= TARGET_HOURS) {
     console.log("🎯 Goal met! Deleting video...");
-    await youtube.videos.delete({
+    // await youtube.videos.delete({
+    //   auth: oauth2Client,
+    //   id: VIDEO_ID,
+    // });
+
+    await youtube.videos.update({
       auth: oauth2Client,
-      id: VIDEO_ID,
+      part: ["status"],
+      requestBody: {
+        id: VIDEO_ID,
+        status: {
+          privacyStatus: "private",
+        },
+      },
     });
-    console.log("🧨 Video deleted!");
     await saveAnalyticsJson(hours, true);
   } else {
     console.log(
@@ -77,4 +94,6 @@ async function deleteIfWatchTimeMet() {
   }
 }
 
-deleteIfWatchTimeMet().catch(console.error);
+(async () => {
+  await deleteIfWatchTimeMet();
+})().catch(console.error);
