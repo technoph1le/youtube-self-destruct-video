@@ -43,7 +43,7 @@ export default function Home() {
         <p>
           The video will be deleted when I reach{" "}
           <strong>4,000 watch hours</strong> for my YouTube channel. Why 4,000?
-          Because that's when I get monetized, haha. So, why not make the
+          Because that is when I get monetized, haha. So, why not make the
           journey more fun xD?
         </p>
         <p>
